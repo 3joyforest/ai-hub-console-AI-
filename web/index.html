@@ -76,11 +76,17 @@
             <strong id="tokenRateNow">0 tokens/min</strong>
             <small id="tokenRateState">等待任务数据</small>
           </div>
-          <div class="rate-gauge" aria-label="当前速度占安全速度比例">
-            <em id="rateGaugePercent">0%</em>
+          <div class="rate-gauge" aria-label="当前速度压力">
+            <span>速度压力</span>
+            <em id="rateGaugePercent">0x</em>
           </div>
         </div>
         <div class="rate-grid">
+          <article>
+            <span>最近 5 分钟估算</span>
+            <strong id="recentTokenBurn">0 tokens</strong>
+            <small>当前版本由运行任务进度推算</small>
+          </article>
           <article>
             <span>今日安全速度</span>
             <strong id="safeTokenRate">0 tokens/min</strong>
@@ -96,6 +102,13 @@
             <strong id="budgetRunway">--</strong>
             <small>按当前速度与平均 token 单价估算</small>
           </article>
+        </div>
+        <div class="rate-explain">
+          <div>
+            <strong>怎么算的</strong>
+            <p id="rateFormula">当前速度 ÷ 今日安全速度 = 速度压力。</p>
+          </div>
+          <div id="rateBreakdown" class="rate-breakdown"></div>
         </div>
       </section>
 

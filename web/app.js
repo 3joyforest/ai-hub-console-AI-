@@ -273,10 +273,13 @@ const providerSummary = document.querySelector("#providerSummary");
 const tokenRateNow = document.querySelector("#tokenRateNow");
 const tokenRateState = document.querySelector("#tokenRateState");
 const safeTokenRate = document.querySelector("#safeTokenRate");
+const recentTokenBurn = document.querySelector("#recentTokenBurn");
 const hourlyTokenForecast = document.querySelector("#hourlyTokenForecast");
 const budgetRunway = document.querySelector("#budgetRunway");
 const rateGauge = document.querySelector(".rate-gauge");
 const rateGaugePercent = document.querySelector("#rateGaugePercent");
+const rateFormula = document.querySelector("#rateFormula");
+const rateBreakdown = document.querySelector("#rateBreakdown");
 
 function loadSettings() {
   if (serverSettings) return serverSettings;
@@ -570,21 +573,26 @@ function renderProviderPanel() {
   providerSummary.textContent = connectedCount ? `已验证 ${connectedCount} 个` : "未连接";
 }
 
-function calculateTokenRate() {
-  const runningTasks = tasks.filter((task) => task.status === "running");
-  return runningTasks.reduce((sum, task) => {
-    const etaMinutes = parseEtaMinutes(task.eta);
-    if (!etaMinutes || task.progress >= 100) return sum;
-    const usedTokens = parseTokenLabel(task.tokens);
-    const estimatedTotal = usedTokens / Math.max(task.progress / 100, 0.05);
-    const remainingTokens = Math.max(estimatedTotal - usedTokens, 0);
-    return sum + remainingTokens / etaMinutes;
-  }, 0);
-}
-
 function getMinutesLeftToday() {
   const now = new Date();
   return Math.max(24 * 60 - now.getHours() * 60 - now.getMinutes(), 1);
+}
+
+function getRunningTaskRates() {
+  return tasks
+    .filter((task) => task.status === "running")
+    .map((task) => {
+      const etaMinutes = parseEtaMinutes(task.eta);
+      if (!etaMinutes || task.progress >= 100) return { task, rate: 0 };
+      const usedTokens = parseTokenLabel(task.tokens);
+      const estimatedTotal = usedTokens / Math.max(task.progress / 100, 0.05);
+      const remainingTokens = Math.max(estimatedTotal - usedTokens, 0);
+      return {
+        task,
+        rate: remainingTokens / etaMinutes
+      };
+    })
+    .filter((item) => item.rate > 0);
 }
 
 function renderRateDashboard() {
@@ -595,24 +603,45 @@ function renderRateDashboard() {
   const remainingCost = Math.max(subscriptionPlan.dailyCostLimit - todayCost, 0);
   const minutesLeft = getMinutesLeftToday();
   const safeRate = averageCostPerToken ? remainingCost / averageCostPerToken / minutesLeft : 0;
-  const currentRate = calculateTokenRate();
-  const ratio = safeRate ? Math.min((currentRate / safeRate) * 100, 180) : 0;
-  const clampedRatio = Math.min(ratio, 100);
-  const color = ratio >= 100 ? "var(--danger)" : ratio >= 75 ? "var(--accent-4)" : "var(--accent-2)";
+  const taskRates = getRunningTaskRates();
+  const currentRate = taskRates.reduce((sum, item) => sum + item.rate, 0);
+  const rawMultiple = safeRate ? currentRate / safeRate : 0;
+  const clampedRatio = Math.min(rawMultiple * 100, 100);
+  const color = rawMultiple >= 1 ? "var(--danger)" : rawMultiple >= 0.75 ? "var(--accent-4)" : "var(--accent-2)";
   const runwayMinutes = currentRate && averageCostPerToken ? remainingCost / (currentRate * averageCostPerToken) : 0;
+  const maxTaskRate = Math.max(...taskRates.map((item) => item.rate), 1);
 
   tokenRateNow.textContent = `${formatTokens(Math.round(currentRate))}/min`;
+  recentTokenBurn.textContent = formatTokens(Math.round(currentRate * 5));
   safeTokenRate.textContent = `${formatTokens(Math.round(safeRate))}/min`;
   hourlyTokenForecast.textContent = formatTokens(Math.round(currentRate * 60));
   budgetRunway.textContent = runwayMinutes ? `${Math.floor(runwayMinutes / 60)}小时 ${Math.round(runwayMinutes % 60)}分钟` : "暂无运行任务";
   rateGauge.style.background = `conic-gradient(${color} 0 ${clampedRatio * 3.6}deg, #edf2f8 ${clampedRatio * 3.6}deg 360deg)`;
-  rateGaugePercent.textContent = `${Math.round(ratio)}%`;
+  rateGaugePercent.textContent = rawMultiple ? `${rawMultiple.toFixed(rawMultiple >= 10 ? 0 : 1)}x` : "0x";
+  rateFormula.textContent = rawMultiple
+    ? `${formatTokens(Math.round(currentRate))}/min ÷ ${formatTokens(Math.round(safeRate))}/min = 当前速度约为安全速度的 ${rawMultiple.toFixed(rawMultiple >= 10 ? 0 : 1)} 倍。`
+    : "当前没有运行任务，所以速度压力为 0。";
+  rateBreakdown.innerHTML = taskRates.length
+    ? taskRates
+        .map(
+          ({ task, rate }) => `
+            <div class="rate-task-row">
+              <strong title="${task.title}">${task.tool}</strong>
+              <div class="rate-task-track" aria-label="${task.title} ${formatTokens(Math.round(rate))}/min">
+                <span style="width: ${(rate / maxTaskRate) * 100}%"></span>
+              </div>
+              <span>${formatTokens(Math.round(rate))}/min</span>
+            </div>
+          `
+        )
+        .join("")
+    : `<p>当前没有运行中的任务。</p>`;
 
   if (!currentRate) {
     tokenRateState.textContent = "当前没有运行中的任务";
-  } else if (ratio >= 100) {
+  } else if (rawMultiple >= 1) {
     tokenRateState.textContent = "速度高于今日安全线，建议暂停或切低成本模型";
-  } else if (ratio >= 75) {
+  } else if (rawMultiple >= 0.75) {
     tokenRateState.textContent = "速度偏快，接近今日安全线";
   } else {
     tokenRateState.textContent = "当前速度在安全范围内";
