@@ -243,6 +243,7 @@ h3 {
 .demo-banner {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
   padding: 12px 14px;
@@ -258,6 +259,32 @@ h3 {
 
 .demo-banner span {
   color: #7c6740;
+}
+
+.demo-banner em {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: rgba(124, 86, 0, 0.1);
+  color: #7c5600;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.demo-banner.local {
+  border-color: rgba(20, 163, 127, 0.24);
+  background: #effbf7;
+  color: #0c6c55;
+}
+
+.demo-banner.local span {
+  color: #3f7165;
+}
+
+.demo-banner.local em {
+  background: rgba(20, 163, 127, 0.12);
+  color: #0c6c55;
 }
 
 .primary {

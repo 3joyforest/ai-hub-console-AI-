@@ -1,0 +1,36 @@
+{
+  "activeRange": "today",
+  "soundEnabled": true,
+  "doneTone": "soft",
+  "approvalTone": "urgent",
+  "tools": [
+    {
+      "id": "codex",
+      "selected": true,
+      "connected": true,
+      "account": "本机账号",
+      "updatedAt": "2 分钟前"
+    },
+    {
+      "id": "claude",
+      "selected": true,
+      "connected": true,
+      "account": "本机账号",
+      "updatedAt": "5 分钟前"
+    },
+    {
+      "id": "chatgpt",
+      "selected": true,
+      "connected": false,
+      "account": "",
+      "updatedAt": "未同步"
+    },
+    {
+      "id": "llama",
+      "selected": false,
+      "connected": false,
+      "account": "",
+      "updatedAt": "未同步"
+    }
+  ]
+}

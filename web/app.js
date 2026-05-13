@@ -1,5 +1,7 @@
 const palette = ["#2f6df6", "#14a37f", "#8b5cf6", "#f59e0b", "#d14b4b"];
 const storageKey = "aiHubConsoleSettings";
+let backendAvailable = false;
+let serverSettings = null;
 
 const tools = [
   {
@@ -34,8 +36,8 @@ const tools = [
   },
   {
     id: "chatgpt",
-    name: "ChatGPT",
-    desc: "日常问答、总结、轻量自动化",
+    name: "ChatGPT / 通用 API",
+    desc: "OpenAI、DeepSeek、豆包、千问等兼容接口",
     usage: {
       today: { tokens: 41600, cost: 1.64, tasks: 12 },
       week: { tokens: 286000, cost: 10.8, tasks: 76 },
@@ -224,8 +226,12 @@ const topupCreditBar = document.querySelector("#topupCreditBar");
 const dailyLimitState = document.querySelector("#dailyLimitState");
 const monthlyTokenState = document.querySelector("#monthlyTokenState");
 const topupCreditState = document.querySelector("#topupCreditState");
+const demoBanner = document.querySelector(".demo-banner");
+const demoBannerText = document.querySelector("#demoBannerText");
+const backendStatus = document.querySelector("#backendStatus");
 
 function loadSettings() {
+  if (serverSettings) return serverSettings;
   try {
     return JSON.parse(localStorage.getItem(storageKey)) || {};
   } catch {
@@ -233,8 +239,8 @@ function loadSettings() {
   }
 }
 
-function saveSettings() {
-  const settings = {
+function collectSettings() {
+  return {
     activeRange,
     soundEnabled: soundToggle.checked,
     doneTone: doneToneSelect.value,
@@ -247,7 +253,96 @@ function saveSettings() {
       updatedAt: tool.updatedAt
     }))
   };
+}
+
+function saveSettings() {
+  const settings = collectSettings();
+  serverSettings = settings;
   localStorage.setItem(storageKey, JSON.stringify(settings));
+
+  if (backendAvailable) {
+    fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings)
+    }).catch(() => {
+      backendAvailable = false;
+      updateBackendStatus();
+    });
+  }
+}
+
+function updateBackendStatus() {
+  if (!backendStatus || !demoBannerText || !demoBanner) return;
+  demoBanner.classList.toggle("local", backendAvailable);
+  backendStatus.textContent = backendAvailable ? "本地服务已连接" : "静态演示模式";
+  demoBannerText.textContent = backendAvailable
+    ? "本地服务正在运行：设置会保存到本机，当前用量仍是演示数据，下一步可接入真实日志/API。"
+    : "当前网站使用演示数据，真实 Codex、Claude、API Key 和本地模型接入仍在开发中。";
+}
+
+async function initBackend() {
+  try {
+    const healthResponse = await fetch("/api/health", { cache: "no-store" });
+    if (!healthResponse.ok) throw new Error("local backend unavailable");
+    const health = await healthResponse.json();
+    backendAvailable = Boolean(health.ok);
+
+    const settingsResponse = await fetch("/api/settings", { cache: "no-store" });
+    if (settingsResponse.ok) {
+      serverSettings = await settingsResponse.json();
+    }
+  } catch {
+    backendAvailable = false;
+    serverSettings = null;
+  }
+
+  updateBackendStatus();
+}
+
+async function testOpenAICompatibleTool(tool) {
+  if (!backendAvailable) {
+    showToast("请先用 npm run dev 启动本地服务，再测试 API Key", "approval");
+    return false;
+  }
+
+  const baseUrl = window.prompt(
+    "填写 OpenAI-compatible Base URL，例如 DeepSeek: https://api.deepseek.com/v1，千问: https://dashscope.aliyuncs.com/compatible-mode/v1"
+  );
+  if (!baseUrl) return false;
+
+  const apiKey = window.prompt("填写 API Key。它只会发送到你本机 localhost 后端，不会保存到仓库。");
+  if (!apiKey) return false;
+
+  const model = window.prompt("填写模型名，例如 deepseek-chat、qwen-plus、doubao-seed-1-6", "deepseek-chat");
+  if (!model) return false;
+
+  showToast("正在测试 API 连接...", "done");
+  try {
+    const response = await fetch("/api/providers/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: tool.name,
+        baseUrl,
+        apiKey,
+        model
+      })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "接口测试失败");
+    }
+
+    tool.connected = true;
+    tool.account = `${model} 已验证`;
+    tool.updatedAt = "刚刚";
+    showToast(`${tool.name} API 已验证`, "done");
+    return true;
+  } catch (error) {
+    showToast(error.message || "接口测试失败", "approval");
+    return false;
+  }
 }
 
 function applySettings() {
@@ -707,22 +802,28 @@ toolSelectorList.addEventListener("change", (event) => {
   saveSettings();
 });
 
-toolSelectorList.addEventListener("click", (event) => {
+toolSelectorList.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const tool = tools.find((item) => item.id === button.dataset.tool);
   const action = button.dataset.action;
 
   if (action === "import") {
-    tool.connected = true;
-    tool.account = tool.id === "chatgpt" ? "个人 Key" : tool.id === "llama" ? "本地服务" : "本机账号";
-    tool.updatedAt = "刚刚";
-    showToast(`${tool.name} 数据源已接入`, "done");
+    if (tool.id === "chatgpt") {
+      const connected = await testOpenAICompatibleTool(tool);
+      if (!connected) return;
+    } else {
+      tool.connected = true;
+      tool.account = tool.id === "llama" ? "本地服务" : "本机账号";
+      tool.updatedAt = "刚刚";
+      showToast(`${tool.name} 数据源已接入`, "done");
+    }
   }
 
   if (action === "switch") {
     if (tool.id === "chatgpt") {
-      tool.account = tool.account === "个人 Key" ? "公司 Key" : "个人 Key";
+      const connected = await testOpenAICompatibleTool(tool);
+      if (!connected) return;
     } else if (tool.id === "llama") {
       tool.account = tool.account === "本地服务" ? "远程服务" : "本地服务";
     } else {
@@ -733,8 +834,13 @@ toolSelectorList.addEventListener("click", (event) => {
   }
 
   if (action === "sync") {
-    tool.updatedAt = "刚刚";
-    showToast(`${tool.name} 数据已重新同步`, "done");
+    if (tool.id === "chatgpt") {
+      const connected = await testOpenAICompatibleTool(tool);
+      if (!connected) return;
+    } else {
+      tool.updatedAt = "刚刚";
+      showToast(`${tool.name} 数据已重新同步`, "done");
+    }
   }
 
   if (action === "disconnect") {
@@ -777,8 +883,13 @@ taskList.addEventListener("click", (event) => {
   }
 });
 
-applySettings();
-renderRangeTabs();
-renderTasks();
-renderApprovals();
-refreshToolViews();
+async function initializeApp() {
+  await initBackend();
+  applySettings();
+  renderRangeTabs();
+  renderTasks();
+  renderApprovals();
+  refreshToolViews();
+}
+
+initializeApp();

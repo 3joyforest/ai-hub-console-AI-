@@ -1,0 +1,6 @@
+{
+  "source": "demo",
+  "updatedAt": "2026-05-14T00:00:00.000Z",
+  "note": "The first local backend stores settings and keeps demo usage here. Real log/API import can replace this file later.",
+  "tools": []
+}
