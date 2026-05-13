@@ -280,8 +280,6 @@ const rateGauge = document.querySelector(".rate-gauge");
 const rateGaugePercent = document.querySelector("#rateGaugePercent");
 const rateFormula = document.querySelector("#rateFormula");
 const rateBreakdown = document.querySelector("#rateBreakdown");
-const sidebarModeLabel = document.querySelector("#sidebarModeLabel");
-const sidebarModeDetail = document.querySelector("#sidebarModeDetail");
 
 function escapeHtml(value) {
   return String(value)
@@ -348,12 +346,6 @@ function updateBackendStatus() {
   demoBannerText.textContent = backendAvailable
     ? "本地服务正在运行：设置会保存到本机，当前用量仍是演示数据，下一步可接入真实日志/API。"
     : "当前是静态预览，无法测试 API 或保存到本机服务；请用 npm run dev 后打开 localhost:8787。";
-  if (sidebarModeLabel && sidebarModeDetail) {
-    sidebarModeLabel.textContent = backendAvailable ? "本地服务" : "静态预览";
-    sidebarModeDetail.textContent = backendAvailable
-      ? "设置保存到本机，可测试 API 供应商。"
-      : "只能看界面，API 测试请切到本地版。";
-  }
 }
 
 async function initBackend() {
