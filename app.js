@@ -239,7 +239,7 @@ function formatMoney(value) {
 }
 
 function getSelectedTools() {
-  return tools.filter((tool) => tool.selected);
+  return tools.filter((tool) => tool.selected && tool.connected);
 }
 
 function getToolActions(tool) {
@@ -286,7 +286,7 @@ function renderToolSelector() {
           <small>${tool.desc}</small>
           <div class="tool-source">
             <span>数据来源：${tool.source}</span>
-            <span>更新：${tool.updatedAt}</span>
+            <span>${tool.connected ? `更新：${tool.updatedAt}` : "未接入时不计入统计"}</span>
           </div>
           <div class="account-row">
             <span class="account-status ${tool.connected ? "" : "disconnected"}">
@@ -573,7 +573,8 @@ function updateCounts() {
   const meta = rangeMeta[activeRange];
 
   document.querySelector("#approvalCount").textContent = approvals.length;
-  document.querySelector("#selectedToolsCount").textContent = `已选择 ${selectedTools.length} 个`;
+  const checkedCount = tools.filter((tool) => tool.selected).length;
+  document.querySelector("#selectedToolsCount").textContent = `统计中 ${selectedTools.length} 个 / 已勾选 ${checkedCount} 个`;
   document.querySelector("#tokenSummaryLabel").textContent = `${meta.label} Token`;
   document.querySelector("#costSummaryLabel").textContent = `${meta.label}成本`;
   document.querySelector("#taskSummaryLabel").textContent = `${meta.label}任务数`;
