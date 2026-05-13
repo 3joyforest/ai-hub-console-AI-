@@ -1,4 +1,5 @@
 const palette = ["#2f6df6", "#14a37f", "#8b5cf6", "#f59e0b", "#d14b4b"];
+const storageKey = "aiHubConsoleSettings";
 
 const tools = [
   {
@@ -223,6 +224,63 @@ const topupCreditBar = document.querySelector("#topupCreditBar");
 const dailyLimitState = document.querySelector("#dailyLimitState");
 const monthlyTokenState = document.querySelector("#monthlyTokenState");
 const topupCreditState = document.querySelector("#topupCreditState");
+
+function loadSettings() {
+  try {
+    return JSON.parse(localStorage.getItem(storageKey)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSettings() {
+  const settings = {
+    activeRange,
+    soundEnabled: soundToggle.checked,
+    doneTone: doneToneSelect.value,
+    approvalTone: approvalToneSelect.value,
+    tools: tools.map((tool) => ({
+      id: tool.id,
+      selected: tool.selected,
+      connected: tool.connected,
+      account: tool.account,
+      updatedAt: tool.updatedAt
+    }))
+  };
+  localStorage.setItem(storageKey, JSON.stringify(settings));
+}
+
+function applySettings() {
+  const settings = loadSettings();
+  if (settings.activeRange && rangeMeta[settings.activeRange]) {
+    activeRange = settings.activeRange;
+  }
+  if (typeof settings.soundEnabled === "boolean") {
+    soundToggle.checked = settings.soundEnabled;
+  }
+  if (settings.doneTone && tonePatterns[settings.doneTone]) {
+    doneToneSelect.value = settings.doneTone;
+  }
+  if (settings.approvalTone && tonePatterns[settings.approvalTone]) {
+    approvalToneSelect.value = settings.approvalTone;
+  }
+  if (Array.isArray(settings.tools)) {
+    settings.tools.forEach((savedTool) => {
+      const tool = tools.find((item) => item.id === savedTool.id);
+      if (!tool) return;
+      if (typeof savedTool.selected === "boolean") tool.selected = savedTool.selected;
+      if (typeof savedTool.connected === "boolean") tool.connected = savedTool.connected;
+      if (typeof savedTool.account === "string") tool.account = savedTool.account;
+      if (typeof savedTool.updatedAt === "string") tool.updatedAt = savedTool.updatedAt;
+    });
+  }
+}
+
+function renderRangeTabs() {
+  document.querySelectorAll(".range-tabs button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.range === activeRange);
+  });
+}
 
 function getUsage(tool, range = activeRange) {
   return tool.usage[range];
@@ -610,18 +668,23 @@ document.querySelector("#approvalSound").addEventListener("click", () => {
 });
 
 document.querySelector("#applySounds").addEventListener("click", () => {
+  saveSettings();
   showToast("已应用提示音设置：先试听完成音，再试听审批音", "done");
   window.setTimeout(() => playTone("approval"), 700);
 });
+
+soundToggle.addEventListener("change", saveSettings);
+doneToneSelect.addEventListener("change", saveSettings);
+approvalToneSelect.addEventListener("change", saveSettings);
 
 document.querySelector(".range-tabs").addEventListener("click", (event) => {
   const button = event.target.closest("[data-range]");
   if (!button) return;
   activeRange = button.dataset.range;
-  document.querySelectorAll(".range-tabs button").forEach((item) => item.classList.remove("active"));
-  button.classList.add("active");
+  renderRangeTabs();
   renderUsage();
   updateCounts();
+  saveSettings();
   showToast(`已切换到${rangeMeta[activeRange].label}统计`, "done");
 });
 
@@ -641,6 +704,7 @@ toolSelectorList.addEventListener("change", (event) => {
   const tool = tools.find((item) => item.id === input.dataset.toolToggle);
   tool.selected = input.checked;
   refreshToolViews();
+  saveSettings();
 });
 
 toolSelectorList.addEventListener("click", (event) => {
@@ -681,6 +745,7 @@ toolSelectorList.addEventListener("click", (event) => {
   }
 
   refreshToolViews();
+  saveSettings();
 });
 
 taskList.addEventListener("click", (event) => {
@@ -712,6 +777,8 @@ taskList.addEventListener("click", (event) => {
   }
 });
 
+applySettings();
+renderRangeTabs();
 renderTasks();
 renderApprovals();
 refreshToolViews();

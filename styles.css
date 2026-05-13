@@ -240,6 +240,26 @@ h3 {
   color: var(--accent);
 }
 
+.demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #f1ddaa;
+  border-radius: 8px;
+  background: #fff8e8;
+  color: #7c5600;
+}
+
+.demo-banner strong {
+  flex: 0 0 auto;
+}
+
+.demo-banner span {
+  color: #7c6740;
+}
+
 .primary {
   min-width: 136px;
   border: 0;
