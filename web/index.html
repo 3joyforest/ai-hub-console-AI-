@@ -18,12 +18,20 @@
 
       <nav class="nav" aria-label="主导航">
         <button class="active" data-target="overview">总览</button>
+        <button data-target="rate">速度</button>
         <button data-target="budget">预算</button>
         <button data-target="trends">趋势</button>
         <button data-target="tools">工具</button>
         <button data-target="providers">API</button>
         <button data-target="notifications">提醒</button>
       </nav>
+
+      <section class="sidebar-status" aria-label="运行模式">
+        <span>运行模式</span>
+        <strong id="sidebarModeLabel">静态预览</strong>
+        <p id="sidebarModeDetail">API 测试需要打开本地服务。</p>
+        <a id="localAppLink" href="http://localhost:8787/">打开本地版</a>
+      </section>
     </aside>
 
     <main class="app">

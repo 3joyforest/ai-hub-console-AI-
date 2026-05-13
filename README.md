@@ -141,7 +141,7 @@ POST /api/providers/test
 - Codex
 - Claude Code
 - ChatGPT / OpenAI
-- Local Llama
+- 本地模型（可选）
 
 未接入的数据源不会计入统计。
 
@@ -152,9 +152,9 @@ POST /api/providers/test
 - Codex：检测本机、更换目录、重新扫描
 - Claude Code：选择日志目录、更换日志目录、重新扫描
 - ChatGPT / OpenAI：添加 API Key、切换 Key、重新同步
-- Local Llama：选择本地服务、切换服务、测试连接
+- 本地模型（可选）：选择本地服务、切换服务、测试连接
 
-Codex、Claude Code 和 Local Llama 目前仍是原型交互；ChatGPT / OpenAI-compatible 已经可以通过本地服务测试 API Key。
+Codex、Claude Code 和本地模型目前仍是原型交互；ChatGPT / OpenAI-compatible 已经可以通过本地服务测试 API Key。
 
 ### API 供应商
 

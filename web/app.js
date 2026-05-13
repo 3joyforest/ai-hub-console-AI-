@@ -51,15 +51,15 @@ const tools = [
   },
   {
     id: "llama",
-    name: "Local Llama",
-    desc: "本地隐私任务、低成本批处理",
+    name: "本地模型（可选）",
+    desc: "有 Ollama / LM Studio 时再开启",
     usage: {
       today: { tokens: 22100, cost: 0.12, tasks: 17 },
       week: { tokens: 146000, cost: 0.82, tasks: 104 },
       month: { tokens: 300000, cost: 1.9, tasks: 281 }
     },
     connected: false,
-    selected: true,
+    selected: false,
     source: "手动导入",
     updatedAt: "未同步",
     account: ""
@@ -158,13 +158,13 @@ const tasks = [
     eta: "已生成复盘"
   },
   {
-    title: "本地模型批量总结 issue",
-    tool: "Local Llama",
+    title: "批量总结 GitHub issue",
+    tool: "Codex",
     status: "running",
     label: "运行中",
     progress: 31,
     tokens: "22.1K",
-    cost: "$0.12",
+    cost: "$0.84",
     eta: "约 9 分钟"
   }
 ];
@@ -280,6 +280,17 @@ const rateGauge = document.querySelector(".rate-gauge");
 const rateGaugePercent = document.querySelector("#rateGaugePercent");
 const rateFormula = document.querySelector("#rateFormula");
 const rateBreakdown = document.querySelector("#rateBreakdown");
+const sidebarModeLabel = document.querySelector("#sidebarModeLabel");
+const sidebarModeDetail = document.querySelector("#sidebarModeDetail");
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
 
 function loadSettings() {
   if (serverSettings) return serverSettings;
@@ -336,7 +347,13 @@ function updateBackendStatus() {
   backendStatus.textContent = backendAvailable ? "本地服务已连接" : "静态演示模式";
   demoBannerText.textContent = backendAvailable
     ? "本地服务正在运行：设置会保存到本机，当前用量仍是演示数据，下一步可接入真实日志/API。"
-    : "当前网站使用演示数据，真实 Codex、Claude、API Key 和本地模型接入仍在开发中。";
+    : "当前是静态预览，无法测试 API 或保存到本机服务；请用 npm run dev 后打开 localhost:8787。";
+  if (sidebarModeLabel && sidebarModeDetail) {
+    sidebarModeLabel.textContent = backendAvailable ? "本地服务" : "静态预览";
+    sidebarModeDetail.textContent = backendAvailable
+      ? "设置保存到本机，可测试 API 供应商。"
+      : "只能看界面，API 测试请切到本地版。";
+  }
 }
 
 async function initBackend() {
@@ -356,51 +373,6 @@ async function initBackend() {
   }
 
   updateBackendStatus();
-}
-
-async function testOpenAICompatibleTool(tool) {
-  if (!backendAvailable) {
-    showToast("请先用 npm run dev 启动本地服务，再测试 API Key", "approval");
-    return false;
-  }
-
-  const baseUrl = window.prompt(
-    "填写 OpenAI-compatible Base URL，例如 DeepSeek: https://api.deepseek.com/v1，千问: https://dashscope.aliyuncs.com/compatible-mode/v1"
-  );
-  if (!baseUrl) return false;
-
-  const apiKey = window.prompt("填写 API Key。它只会发送到你本机 localhost 后端，不会保存到仓库。");
-  if (!apiKey) return false;
-
-  const model = window.prompt("填写模型名，例如 deepseek-chat、qwen-plus、doubao-seed-1-6", "deepseek-chat");
-  if (!model) return false;
-
-  showToast("正在测试 API 连接...", "done");
-  try {
-    const response = await fetch("/api/providers/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: tool.name,
-        baseUrl,
-        apiKey,
-        model
-      })
-    });
-    const result = await response.json();
-    if (!response.ok || !result.ok) {
-      throw new Error(result.error || "接口测试失败");
-    }
-
-    tool.connected = true;
-    tool.account = `${model} 已验证`;
-    tool.updatedAt = "刚刚";
-    showToast(`${tool.name} API 已验证`, "done");
-    return true;
-  } catch (error) {
-    showToast(error.message || "接口测试失败", "approval");
-    return false;
-  }
 }
 
 function applySettings() {
@@ -483,7 +455,7 @@ function getToolActions(tool) {
     const importLabels = {
       codex: "检测本机",
       claude: "选择日志目录",
-      chatgpt: "添加 API Key",
+      chatgpt: "去 API 面板",
       llama: "选择本地服务"
     };
     return `<button class="account-action primary-action" type="button" data-action="import" data-tool="${tool.id}">${importLabels[tool.id]}</button>`;
@@ -492,13 +464,13 @@ function getToolActions(tool) {
   const switchLabels = {
     codex: "更换目录",
     claude: "更换日志目录",
-    chatgpt: "切换 Key",
+    chatgpt: "选择供应商",
     llama: "切换服务"
   };
   const syncLabels = {
     codex: "重新扫描",
     claude: "重新扫描",
-    chatgpt: "重新同步",
+    chatgpt: "测试 API",
     llama: "测试连接"
   };
 
@@ -544,8 +516,8 @@ function renderProviderPanel() {
         <article class="provider-card ${provider.connected ? "connected" : ""}" data-provider-card="${provider.id}">
           <div class="provider-top">
             <div>
-              <h3>${provider.name}</h3>
-              <p>${provider.desc}</p>
+              <h3>${escapeHtml(provider.name)}</h3>
+              <p>${escapeHtml(provider.desc)}</p>
             </div>
             <span class="provider-status ${provider.connected ? "connected" : ""}">
               ${provider.connected ? "已验证" : "未连接"}
@@ -553,17 +525,17 @@ function renderProviderPanel() {
           </div>
           <label>
             Base URL
-            <input data-provider-field="baseUrl" data-provider="${provider.id}" value="${provider.baseUrl}" />
+            <input data-provider-field="baseUrl" data-provider="${escapeHtml(provider.id)}" value="${escapeHtml(provider.baseUrl)}" />
           </label>
           <label>
             模型名
-            <input data-provider-field="model" data-provider="${provider.id}" value="${provider.model}" />
+            <input data-provider-field="model" data-provider="${escapeHtml(provider.id)}" value="${escapeHtml(provider.model)}" />
           </label>
           <div class="provider-actions">
-            <button class="primary-action" type="button" data-provider-action="test" data-provider="${provider.id}">测试连接</button>
-            <button type="button" data-provider-action="disconnect" data-provider="${provider.id}">断开</button>
+            <button class="primary-action" type="button" data-provider-action="test" data-provider="${escapeHtml(provider.id)}">测试连接</button>
+            <button type="button" data-provider-action="disconnect" data-provider="${escapeHtml(provider.id)}">断开</button>
           </div>
-          <small>状态：${provider.lastChecked}</small>
+          <small>状态：${escapeHtml(provider.lastChecked)}</small>
         </article>
       `
     )
@@ -950,6 +922,49 @@ function refreshToolViews() {
   updateCounts();
 }
 
+function setActiveNav(targetId) {
+  document.querySelectorAll(".nav button").forEach((item) => {
+    item.classList.toggle("active", item.dataset.target === targetId);
+  });
+}
+
+function focusSection(targetId) {
+  const target = document.querySelector(`#${targetId}`);
+  if (!target) return;
+  setActiveNav(targetId);
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function initScrollSpy() {
+  if (!("IntersectionObserver" in window)) return;
+  const sectionIds = ["overview", "rate", "budget", "trends", "tools", "providers", "notifications"];
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible?.target?.id) setActiveNav(visible.target.id);
+    },
+    {
+      rootMargin: "-18% 0px -62% 0px",
+      threshold: [0.12, 0.24, 0.4]
+    }
+  );
+
+  sectionIds.forEach((id) => {
+    const section = document.querySelector(`#${id}`);
+    if (section) observer.observe(section);
+  });
+}
+
+function syncToolFromProvider(provider) {
+  const genericTool = tools.find((tool) => tool.id === "chatgpt");
+  if (!genericTool) return;
+  genericTool.connected = true;
+  genericTool.account = `${provider.name} · ${provider.model}`;
+  genericTool.updatedAt = "刚刚";
+}
+
 document.querySelector("#doneSound").addEventListener("click", () => {
   showToast("已播放你选择的完成提示音", "done");
 });
@@ -982,11 +997,7 @@ document.querySelector(".range-tabs").addEventListener("click", (event) => {
 document.querySelector(".nav").addEventListener("click", (event) => {
   const button = event.target.closest("[data-target]");
   if (!button) return;
-  const target = document.querySelector(`#${button.dataset.target}`);
-  if (!target) return;
-  document.querySelectorAll(".nav button").forEach((item) => item.classList.remove("active"));
-  button.classList.add("active");
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  focusSection(button.dataset.target);
 });
 
 toolSelectorList.addEventListener("change", (event) => {
@@ -1006,8 +1017,9 @@ toolSelectorList.addEventListener("click", async (event) => {
 
   if (action === "import") {
     if (tool.id === "chatgpt") {
-      const connected = await testOpenAICompatibleTool(tool);
-      if (!connected) return;
+      focusSection("providers");
+      showToast("请在 API 供应商面板选择服务并测试连接", "done");
+      return;
     } else {
       tool.connected = true;
       tool.account = tool.id === "llama" ? "本地服务" : "本机账号";
@@ -1018,8 +1030,9 @@ toolSelectorList.addEventListener("click", async (event) => {
 
   if (action === "switch") {
     if (tool.id === "chatgpt") {
-      const connected = await testOpenAICompatibleTool(tool);
-      if (!connected) return;
+      focusSection("providers");
+      showToast("请在 API 供应商面板切换服务", "done");
+      return;
     } else if (tool.id === "llama") {
       tool.account = tool.account === "本地服务" ? "远程服务" : "本地服务";
     } else {
@@ -1031,8 +1044,9 @@ toolSelectorList.addEventListener("click", async (event) => {
 
   if (action === "sync") {
     if (tool.id === "chatgpt") {
-      const connected = await testOpenAICompatibleTool(tool);
-      if (!connected) return;
+      focusSection("providers");
+      showToast("请在 API 供应商面板测试连接", "done");
+      return;
     } else {
       tool.updatedAt = "刚刚";
       showToast(`${tool.name} 数据已重新同步`, "done");
@@ -1104,14 +1118,7 @@ providerList.addEventListener("click", async (event) => {
     provider.connected = true;
     provider.lastChecked = `刚刚验证成功 · ${provider.model}`;
 
-    if (provider.id !== "openai") {
-      const genericTool = tools.find((tool) => tool.id === "chatgpt");
-      if (genericTool) {
-        genericTool.connected = true;
-        genericTool.account = `${provider.name} · ${provider.model}`;
-        genericTool.updatedAt = "刚刚";
-      }
-    }
+    syncToolFromProvider(provider);
 
     refreshToolViews();
     saveSettings();
@@ -1163,6 +1170,7 @@ async function initializeApp() {
   renderTasks();
   renderApprovals();
   refreshToolViews();
+  initScrollSpy();
 }
 
 initializeApp();
