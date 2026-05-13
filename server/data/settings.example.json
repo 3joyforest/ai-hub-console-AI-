@@ -32,5 +32,35 @@
       "account": "",
       "updatedAt": "未同步"
     }
+  ],
+  "providers": [
+    {
+      "id": "openai",
+      "baseUrl": "https://api.openai.com/v1",
+      "model": "gpt-4.1-mini",
+      "connected": false,
+      "lastChecked": "未测试"
+    },
+    {
+      "id": "deepseek",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "model": "deepseek-chat",
+      "connected": false,
+      "lastChecked": "未测试"
+    },
+    {
+      "id": "qwen",
+      "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "model": "qwen-plus",
+      "connected": false,
+      "lastChecked": "未测试"
+    },
+    {
+      "id": "doubao",
+      "baseUrl": "https://ark.cn-beijing.volces.com/api/v3",
+      "model": "doubao-seed-1-6",
+      "connected": false,
+      "lastChecked": "未测试"
+    }
   ]
 }

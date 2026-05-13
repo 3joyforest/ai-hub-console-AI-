@@ -21,6 +21,7 @@
         <button data-target="budget">预算</button>
         <button data-target="trends">趋势</button>
         <button data-target="tools">工具</button>
+        <button data-target="providers">API</button>
         <button data-target="notifications">提醒</button>
       </nav>
     </aside>
@@ -66,6 +67,36 @@
           <strong id="approvalCount">2</strong>
           <small>需要你确认权限</small>
         </article>
+      </section>
+
+      <section id="rate" class="rate-panel panel" aria-label="当前 token 消耗速度">
+        <div class="rate-hero">
+          <div>
+            <span>当前消耗速度</span>
+            <strong id="tokenRateNow">0 tokens/min</strong>
+            <small id="tokenRateState">等待任务数据</small>
+          </div>
+          <div class="rate-gauge" aria-label="当前速度占安全速度比例">
+            <em id="rateGaugePercent">0%</em>
+          </div>
+        </div>
+        <div class="rate-grid">
+          <article>
+            <span>今日安全速度</span>
+            <strong id="safeTokenRate">0 tokens/min</strong>
+            <small>按剩余预算和今日剩余时间估算</small>
+          </article>
+          <article>
+            <span>按当前速度 1 小时</span>
+            <strong id="hourlyTokenForecast">0 tokens</strong>
+            <small>只用于判断当前燃烧速度</small>
+          </article>
+          <article>
+            <span>预算可持续</span>
+            <strong id="budgetRunway">--</strong>
+            <small>按当前速度与平均 token 单价估算</small>
+          </article>
+        </div>
       </section>
 
       <section id="budget" class="plan-panel" aria-label="包月计划和额度">
@@ -176,6 +207,17 @@
           <span id="selectedToolsCount">统计中 2 个</span>
         </div>
         <div id="toolSelectorList" class="tool-selector-list"></div>
+      </section>
+
+      <section id="providers" class="provider-panel panel" aria-label="API 供应商接入">
+        <div class="panel-header">
+          <div>
+            <h2>API 供应商</h2>
+            <p>先支持 OpenAI-compatible 接口：DeepSeek、通义千问、豆包和 OpenAI 都可以在本机测试连接。</p>
+          </div>
+          <span id="providerSummary">未连接</span>
+        </div>
+        <div id="providerList" class="provider-list"></div>
       </section>
 
       <section id="notifications" class="notification-center" aria-label="提醒中心">

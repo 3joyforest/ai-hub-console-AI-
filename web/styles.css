@@ -299,6 +299,8 @@ h3 {
 }
 
 .tool-selector,
+.rate-panel,
+.provider-panel,
 .plan-panel,
 .summary-grid article,
 .panel {
@@ -310,6 +312,13 @@ h3 {
 
 .tool-selector {
   padding: 18px;
+  margin-bottom: 16px;
+}
+
+.rate-panel {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1fr);
+  gap: 16px;
   margin-bottom: 16px;
 }
 
@@ -470,6 +479,83 @@ h3 {
   letter-spacing: 0;
 }
 
+.rate-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  align-items: center;
+  gap: 14px;
+}
+
+.rate-hero span,
+.rate-hero small,
+.rate-grid span,
+.rate-grid small {
+  color: var(--muted);
+}
+
+.rate-hero span,
+.rate-grid span {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.rate-hero strong {
+  display: block;
+  margin: 6px 0;
+  font-size: 34px;
+  letter-spacing: 0;
+}
+
+.rate-gauge {
+  position: relative;
+  width: 112px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent-2) 0deg, #edf2f8 0deg);
+}
+
+.rate-gauge::after {
+  content: "";
+  position: absolute;
+  inset: 13px;
+  border-radius: inherit;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.rate-gauge em {
+  position: relative;
+  z-index: 1;
+  color: var(--ink);
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.rate-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rate-grid article {
+  min-height: 118px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faff;
+}
+
+.rate-grid strong {
+  display: block;
+  margin: 8px 0 4px;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
 .plan-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr);
@@ -483,8 +569,99 @@ h3 {
 }
 
 .usage-panel,
+.provider-panel,
 .notification-center {
   margin-bottom: 16px;
+}
+
+.provider-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.provider-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.provider-card.connected {
+  border-color: rgba(20, 163, 127, 0.34);
+  background: #f7fffc;
+}
+
+.provider-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.provider-top h3 {
+  margin: 0 0 4px;
+}
+
+.provider-top p,
+.provider-card label,
+.provider-card small {
+  color: var(--muted);
+}
+
+.provider-card label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.provider-card input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.provider-actions button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.provider-actions button.primary-action {
+  border-color: rgba(47, 109, 246, 0.4);
+  background: var(--soft);
+  color: var(--accent);
+}
+
+.provider-status {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #edf2f8;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.provider-status.connected {
+  background: #e9f7f2;
+  color: var(--accent-2);
 }
 
 .notification-center {
@@ -1019,6 +1196,7 @@ h3 {
   }
 
   .trend-grid,
+  .rate-panel,
   .notification-center {
     grid-template-columns: 1fr;
   }
@@ -1052,6 +1230,8 @@ h3 {
   .plan-panel,
   .quota-grid,
   .range-tabs,
+  .rate-grid,
+  .provider-list,
   .usage-chart-wrap,
   .task-stats {
     grid-template-columns: 1fr;
@@ -1061,6 +1241,7 @@ h3 {
   .usage-top,
   .approval-top,
   .alert-rule,
+  .rate-hero,
   .section-heading,
   .meter-row {
     align-items: flex-start;
@@ -1069,5 +1250,13 @@ h3 {
 
   .primary {
     width: 100%;
+  }
+
+  .rate-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .rate-gauge {
+    width: 96px;
   }
 }

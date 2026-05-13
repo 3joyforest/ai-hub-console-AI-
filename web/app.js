@@ -87,6 +87,45 @@ const subscriptionPlan = {
   topupCreditUsedBeforeToday: 11.4
 };
 
+const providers = [
+  {
+    id: "openai",
+    name: "OpenAI",
+    desc: "官方 OpenAI-compatible 接口",
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-4.1-mini",
+    connected: false,
+    lastChecked: "未测试"
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    desc: "国内常用，高性价比推理与代码模型",
+    baseUrl: "https://api.deepseek.com/v1",
+    model: "deepseek-chat",
+    connected: false,
+    lastChecked: "未测试"
+  },
+  {
+    id: "qwen",
+    name: "通义千问",
+    desc: "DashScope 兼容 OpenAI 的调用方式",
+    baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    model: "qwen-plus",
+    connected: false,
+    lastChecked: "未测试"
+  },
+  {
+    id: "doubao",
+    name: "豆包",
+    desc: "火山方舟 OpenAI-compatible 接口",
+    baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    model: "doubao-seed-1-6",
+    connected: false,
+    lastChecked: "未测试"
+  }
+];
+
 const tasks = [
   {
     title: "修复登录页测试失败",
@@ -229,6 +268,15 @@ const topupCreditState = document.querySelector("#topupCreditState");
 const demoBanner = document.querySelector(".demo-banner");
 const demoBannerText = document.querySelector("#demoBannerText");
 const backendStatus = document.querySelector("#backendStatus");
+const providerList = document.querySelector("#providerList");
+const providerSummary = document.querySelector("#providerSummary");
+const tokenRateNow = document.querySelector("#tokenRateNow");
+const tokenRateState = document.querySelector("#tokenRateState");
+const safeTokenRate = document.querySelector("#safeTokenRate");
+const hourlyTokenForecast = document.querySelector("#hourlyTokenForecast");
+const budgetRunway = document.querySelector("#budgetRunway");
+const rateGauge = document.querySelector(".rate-gauge");
+const rateGaugePercent = document.querySelector("#rateGaugePercent");
 
 function loadSettings() {
   if (serverSettings) return serverSettings;
@@ -251,6 +299,13 @@ function collectSettings() {
       connected: tool.connected,
       account: tool.account,
       updatedAt: tool.updatedAt
+    })),
+    providers: providers.map((provider) => ({
+      id: provider.id,
+      baseUrl: provider.baseUrl,
+      model: provider.model,
+      connected: provider.connected,
+      lastChecked: provider.lastChecked
     }))
   };
 }
@@ -369,6 +424,16 @@ function applySettings() {
       if (typeof savedTool.updatedAt === "string") tool.updatedAt = savedTool.updatedAt;
     });
   }
+  if (Array.isArray(settings.providers)) {
+    settings.providers.forEach((savedProvider) => {
+      const provider = providers.find((item) => item.id === savedProvider.id);
+      if (!provider) return;
+      if (typeof savedProvider.baseUrl === "string") provider.baseUrl = savedProvider.baseUrl;
+      if (typeof savedProvider.model === "string") provider.model = savedProvider.model;
+      if (typeof savedProvider.connected === "boolean") provider.connected = savedProvider.connected;
+      if (typeof savedProvider.lastChecked === "string") provider.lastChecked = savedProvider.lastChecked;
+    });
+  }
 }
 
 function renderRangeTabs() {
@@ -389,6 +454,21 @@ function formatTokens(tokens) {
 
 function formatMoney(value) {
   return `$${Math.max(value, 0).toFixed(2)}`;
+}
+
+function parseTokenLabel(label) {
+  const match = String(label).match(/([\d.]+)\s*([KM]?)/i);
+  if (!match) return 0;
+  const value = Number(match[1]);
+  const unit = match[2].toUpperCase();
+  if (unit === "M") return value * 1000000;
+  if (unit === "K") return value * 1000;
+  return value;
+}
+
+function parseEtaMinutes(eta) {
+  const match = String(eta).match(/([\d.]+)\s*分钟/);
+  return match ? Math.max(Number(match[1]), 1) : 0;
 }
 
 function getSelectedTools() {
@@ -452,6 +532,91 @@ function renderToolSelector() {
       }
     )
     .join("");
+}
+
+function renderProviderPanel() {
+  providerList.innerHTML = providers
+    .map(
+      (provider) => `
+        <article class="provider-card ${provider.connected ? "connected" : ""}" data-provider-card="${provider.id}">
+          <div class="provider-top">
+            <div>
+              <h3>${provider.name}</h3>
+              <p>${provider.desc}</p>
+            </div>
+            <span class="provider-status ${provider.connected ? "connected" : ""}">
+              ${provider.connected ? "已验证" : "未连接"}
+            </span>
+          </div>
+          <label>
+            Base URL
+            <input data-provider-field="baseUrl" data-provider="${provider.id}" value="${provider.baseUrl}" />
+          </label>
+          <label>
+            模型名
+            <input data-provider-field="model" data-provider="${provider.id}" value="${provider.model}" />
+          </label>
+          <div class="provider-actions">
+            <button class="primary-action" type="button" data-provider-action="test" data-provider="${provider.id}">测试连接</button>
+            <button type="button" data-provider-action="disconnect" data-provider="${provider.id}">断开</button>
+          </div>
+          <small>状态：${provider.lastChecked}</small>
+        </article>
+      `
+    )
+    .join("");
+
+  const connectedCount = providers.filter((provider) => provider.connected).length;
+  providerSummary.textContent = connectedCount ? `已验证 ${connectedCount} 个` : "未连接";
+}
+
+function calculateTokenRate() {
+  const runningTasks = tasks.filter((task) => task.status === "running");
+  return runningTasks.reduce((sum, task) => {
+    const etaMinutes = parseEtaMinutes(task.eta);
+    if (!etaMinutes || task.progress >= 100) return sum;
+    const usedTokens = parseTokenLabel(task.tokens);
+    const estimatedTotal = usedTokens / Math.max(task.progress / 100, 0.05);
+    const remainingTokens = Math.max(estimatedTotal - usedTokens, 0);
+    return sum + remainingTokens / etaMinutes;
+  }, 0);
+}
+
+function getMinutesLeftToday() {
+  const now = new Date();
+  return Math.max(24 * 60 - now.getHours() * 60 - now.getMinutes(), 1);
+}
+
+function renderRateDashboard() {
+  const selectedTools = getSelectedTools();
+  const todayTokens = selectedTools.reduce((sum, tool) => sum + tool.usage.today.tokens, 0);
+  const todayCost = selectedTools.reduce((sum, tool) => sum + tool.usage.today.cost, 0);
+  const averageCostPerToken = todayTokens ? todayCost / todayTokens : 0.00004;
+  const remainingCost = Math.max(subscriptionPlan.dailyCostLimit - todayCost, 0);
+  const minutesLeft = getMinutesLeftToday();
+  const safeRate = averageCostPerToken ? remainingCost / averageCostPerToken / minutesLeft : 0;
+  const currentRate = calculateTokenRate();
+  const ratio = safeRate ? Math.min((currentRate / safeRate) * 100, 180) : 0;
+  const clampedRatio = Math.min(ratio, 100);
+  const color = ratio >= 100 ? "var(--danger)" : ratio >= 75 ? "var(--accent-4)" : "var(--accent-2)";
+  const runwayMinutes = currentRate && averageCostPerToken ? remainingCost / (currentRate * averageCostPerToken) : 0;
+
+  tokenRateNow.textContent = `${formatTokens(Math.round(currentRate))}/min`;
+  safeTokenRate.textContent = `${formatTokens(Math.round(safeRate))}/min`;
+  hourlyTokenForecast.textContent = formatTokens(Math.round(currentRate * 60));
+  budgetRunway.textContent = runwayMinutes ? `${Math.floor(runwayMinutes / 60)}小时 ${Math.round(runwayMinutes % 60)}分钟` : "暂无运行任务";
+  rateGauge.style.background = `conic-gradient(${color} 0 ${clampedRatio * 3.6}deg, #edf2f8 ${clampedRatio * 3.6}deg 360deg)`;
+  rateGaugePercent.textContent = `${Math.round(ratio)}%`;
+
+  if (!currentRate) {
+    tokenRateState.textContent = "当前没有运行中的任务";
+  } else if (ratio >= 100) {
+    tokenRateState.textContent = "速度高于今日安全线，建议暂停或切低成本模型";
+  } else if (ratio >= 75) {
+    tokenRateState.textContent = "速度偏快，接近今日安全线";
+  } else {
+    tokenRateState.textContent = "当前速度在安全范围内";
+  }
 }
 
 function renderTrends() {
@@ -747,10 +912,12 @@ function updateCounts() {
 
 function refreshToolViews() {
   renderToolSelector();
+  renderProviderPanel();
   renderUsage();
   renderPlan();
   renderAlertRules();
   renderTrends();
+  renderRateDashboard();
   updateCounts();
 }
 
@@ -854,6 +1021,81 @@ toolSelectorList.addEventListener("click", async (event) => {
   saveSettings();
 });
 
+providerList.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-provider-field]");
+  if (!input) return;
+  const provider = providers.find((item) => item.id === input.dataset.provider);
+  if (!provider) return;
+  provider[input.dataset.providerField] = input.value.trim();
+  provider.connected = false;
+  provider.lastChecked = "配置已修改，等待重新测试";
+  renderProviderPanel();
+  saveSettings();
+});
+
+providerList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-provider-action]");
+  if (!button) return;
+  const provider = providers.find((item) => item.id === button.dataset.provider);
+  if (!provider) return;
+
+  if (button.dataset.providerAction === "disconnect") {
+    provider.connected = false;
+    provider.lastChecked = "已断开";
+    renderProviderPanel();
+    saveSettings();
+    showToast(`${provider.name} 已断开`, "approval");
+    return;
+  }
+
+  if (!backendAvailable) {
+    showToast("请先用 npm run dev 启动本地服务", "approval");
+    return;
+  }
+
+  const apiKey = window.prompt(`填写 ${provider.name} API Key。Key 只发送到本机 localhost，不会保存。`);
+  if (!apiKey) return;
+
+  showToast(`正在测试 ${provider.name}...`, "done");
+  try {
+    const response = await fetch("/api/providers/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: provider.name,
+        baseUrl: provider.baseUrl,
+        apiKey,
+        model: provider.model
+      })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) {
+      throw new Error(result.error || "接口测试失败");
+    }
+    provider.connected = true;
+    provider.lastChecked = `刚刚验证成功 · ${provider.model}`;
+
+    if (provider.id !== "openai") {
+      const genericTool = tools.find((tool) => tool.id === "chatgpt");
+      if (genericTool) {
+        genericTool.connected = true;
+        genericTool.account = `${provider.name} · ${provider.model}`;
+        genericTool.updatedAt = "刚刚";
+      }
+    }
+
+    refreshToolViews();
+    saveSettings();
+    showToast(`${provider.name} 连接成功`, "done");
+  } catch (error) {
+    provider.connected = false;
+    provider.lastChecked = error.message || "测试失败";
+    renderProviderPanel();
+    saveSettings();
+    showToast(provider.lastChecked, "approval");
+  }
+});
+
 taskList.addEventListener("click", (event) => {
   const button = event.target.closest("button");
   if (!button) return;
@@ -866,6 +1108,7 @@ taskList.addEventListener("click", (event) => {
     task.eta = "已完成";
     renderTasks();
     updateCounts();
+    renderRateDashboard();
     showToast(`${task.tool} 任务已完成`, "done");
   }
 
@@ -879,6 +1122,7 @@ taskList.addEventListener("click", (event) => {
     renderTasks();
     renderApprovals();
     updateCounts();
+    renderRateDashboard();
     showToast("新的审批请求已加入中心", "approval");
   }
 });
