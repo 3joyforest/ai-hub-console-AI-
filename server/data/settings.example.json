@@ -26,7 +26,7 @@
       "updatedAt": "未同步"
     },
     {
-      "id": "llama",
+      "id": "grok",
       "selected": false,
       "connected": false,
       "account": "",
@@ -52,6 +52,13 @@
       "id": "qwen",
       "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
       "model": "qwen-plus",
+      "connected": false,
+      "lastChecked": "未测试"
+    },
+    {
+      "id": "grok",
+      "baseUrl": "https://api.x.ai/v1",
+      "model": "grok-4",
       "connected": false,
       "lastChecked": "未测试"
     },

@@ -50,30 +50,30 @@ const tools = [
     account: ""
   },
   {
-    id: "llama",
-    name: "本地模型（可选）",
-    desc: "有 Ollama / LM Studio 时再开启",
+    id: "grok",
+    name: "Grok / xAI",
+    desc: "xAI Grok API 接口",
     usage: {
-      today: { tokens: 22100, cost: 0.12, tasks: 17 },
-      week: { tokens: 146000, cost: 0.82, tasks: 104 },
-      month: { tokens: 300000, cost: 1.9, tasks: 281 }
+      today: { tokens: 22100, cost: 0.88, tasks: 17 },
+      week: { tokens: 146000, cost: 5.9, tasks: 104 },
+      month: { tokens: 300000, cost: 12.4, tasks: 281 }
     },
     connected: false,
     selected: false,
-    source: "手动导入",
+    source: "xAI API Key",
     updatedAt: "未同步",
     account: ""
   }
 ];
 
 const trendDays = [
-  { day: "周四", cost: 4.8, tokens: 148000, mix: { codex: 34, claude: 28, chatgpt: 25, llama: 13 } },
-  { day: "周五", cost: 5.9, tokens: 171000, mix: { codex: 38, claude: 24, chatgpt: 27, llama: 11 } },
-  { day: "周六", cost: 3.6, tokens: 98000, mix: { codex: 29, claude: 31, chatgpt: 22, llama: 18 } },
-  { day: "周日", cost: 4.2, tokens: 121000, mix: { codex: 24, claude: 36, chatgpt: 21, llama: 19 } },
-  { day: "周一", cost: 7.1, tokens: 203000, mix: { codex: 41, claude: 26, chatgpt: 22, llama: 11 } },
-  { day: "周二", cost: 9.4, tokens: 337000, mix: { codex: 44, claude: 30, chatgpt: 18, llama: 8 } },
-  { day: "今天", cost: 7.13, tokens: 184200, mix: { codex: 37, claude: 28, chatgpt: 23, llama: 12 } }
+  { day: "周四", cost: 4.8, tokens: 148000, mix: { codex: 34, claude: 28, chatgpt: 25, grok: 13 } },
+  { day: "周五", cost: 5.9, tokens: 171000, mix: { codex: 38, claude: 24, chatgpt: 27, grok: 11 } },
+  { day: "周六", cost: 3.6, tokens: 98000, mix: { codex: 29, claude: 31, chatgpt: 22, grok: 18 } },
+  { day: "周日", cost: 4.2, tokens: 121000, mix: { codex: 24, claude: 36, chatgpt: 21, grok: 19 } },
+  { day: "周一", cost: 7.1, tokens: 203000, mix: { codex: 41, claude: 26, chatgpt: 22, grok: 11 } },
+  { day: "周二", cost: 9.4, tokens: 337000, mix: { codex: 44, claude: 30, chatgpt: 18, grok: 8 } },
+  { day: "今天", cost: 7.13, tokens: 184200, mix: { codex: 37, claude: 28, chatgpt: 23, grok: 12 } }
 ];
 
 const subscriptionPlan = {
@@ -112,6 +112,15 @@ const providers = [
     desc: "DashScope 兼容 OpenAI 的调用方式",
     baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     model: "qwen-plus",
+    connected: false,
+    lastChecked: "未测试"
+  },
+  {
+    id: "grok",
+    name: "Grok / xAI",
+    desc: "xAI 的 OpenAI-compatible 接口",
+    baseUrl: "https://api.x.ai/v1",
+    model: "grok-4",
     connected: false,
     lastChecked: "未测试"
   },
@@ -448,7 +457,7 @@ function getToolActions(tool) {
       codex: "检测本机",
       claude: "选择日志目录",
       chatgpt: "去 API 面板",
-      llama: "选择本地服务"
+      grok: "去 API 面板"
     };
     return `<button class="account-action primary-action" type="button" data-action="import" data-tool="${tool.id}">${importLabels[tool.id]}</button>`;
   }
@@ -457,13 +466,13 @@ function getToolActions(tool) {
     codex: "更换目录",
     claude: "更换日志目录",
     chatgpt: "选择供应商",
-    llama: "切换服务"
+    grok: "选择供应商"
   };
   const syncLabels = {
     codex: "重新扫描",
     claude: "重新扫描",
     chatgpt: "测试 API",
-    llama: "测试连接"
+    grok: "测试 API"
   };
 
   return `
@@ -659,7 +668,7 @@ function renderTrends() {
             <span style="width: ${item.mix.codex}%; background: ${palette[0]}"></span>
             <span style="width: ${item.mix.claude}%; background: ${palette[1]}"></span>
             <span style="width: ${item.mix.chatgpt}%; background: ${palette[2]}"></span>
-            <span style="width: ${item.mix.llama}%; background: ${palette[3]}"></span>
+            <span style="width: ${item.mix.grok}%; background: ${palette[3]}"></span>
           </div>
         </article>
       `
@@ -950,11 +959,13 @@ function initScrollSpy() {
 }
 
 function syncToolFromProvider(provider) {
-  const genericTool = tools.find((tool) => tool.id === "chatgpt");
-  if (!genericTool) return;
-  genericTool.connected = true;
-  genericTool.account = `${provider.name} · ${provider.model}`;
-  genericTool.updatedAt = "刚刚";
+  const toolId = provider.id === "grok" ? "grok" : "chatgpt";
+  const tool = tools.find((item) => item.id === toolId);
+  if (!tool) return;
+  tool.connected = true;
+  tool.selected = true;
+  tool.account = `${provider.name} · ${provider.model}`;
+  tool.updatedAt = "刚刚";
 }
 
 document.querySelector("#doneSound").addEventListener("click", () => {
@@ -1008,25 +1019,23 @@ toolSelectorList.addEventListener("click", async (event) => {
   const action = button.dataset.action;
 
   if (action === "import") {
-    if (tool.id === "chatgpt") {
+    if (tool.id === "chatgpt" || tool.id === "grok") {
       focusSection("providers");
-      showToast("请在 API 供应商面板选择服务并测试连接", "done");
+      showToast(tool.id === "grok" ? "请在 API 供应商面板测试 Grok / xAI" : "请在 API 供应商面板选择服务并测试连接", "done");
       return;
     } else {
       tool.connected = true;
-      tool.account = tool.id === "llama" ? "本地服务" : "本机账号";
+      tool.account = "本机账号";
       tool.updatedAt = "刚刚";
       showToast(`${tool.name} 数据源已接入`, "done");
     }
   }
 
   if (action === "switch") {
-    if (tool.id === "chatgpt") {
+    if (tool.id === "chatgpt" || tool.id === "grok") {
       focusSection("providers");
-      showToast("请在 API 供应商面板切换服务", "done");
+      showToast(tool.id === "grok" ? "请在 API 供应商面板切换 Grok 设置" : "请在 API 供应商面板切换服务", "done");
       return;
-    } else if (tool.id === "llama") {
-      tool.account = tool.account === "本地服务" ? "远程服务" : "本地服务";
     } else {
       tool.account = tool.account === "本机账号" ? "备用目录" : "本机账号";
     }
@@ -1035,9 +1044,9 @@ toolSelectorList.addEventListener("click", async (event) => {
   }
 
   if (action === "sync") {
-    if (tool.id === "chatgpt") {
+    if (tool.id === "chatgpt" || tool.id === "grok") {
       focusSection("providers");
-      showToast("请在 API 供应商面板测试连接", "done");
+      showToast(tool.id === "grok" ? "请在 API 供应商面板测试 Grok / xAI" : "请在 API 供应商面板测试连接", "done");
       return;
     } else {
       tool.updatedAt = "刚刚";
@@ -1077,7 +1086,14 @@ providerList.addEventListener("click", async (event) => {
   if (button.dataset.providerAction === "disconnect") {
     provider.connected = false;
     provider.lastChecked = "已断开";
+    const tool = tools.find((item) => item.id === (provider.id === "grok" ? "grok" : "chatgpt"));
+    if (tool) {
+      tool.connected = false;
+      tool.account = "";
+      tool.updatedAt = "未同步";
+    }
     renderProviderPanel();
+    refreshToolViews();
     saveSettings();
     showToast(`${provider.name} 已断开`, "approval");
     return;

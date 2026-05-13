@@ -95,11 +95,12 @@ POST /api/providers/test
 
 常见 Base URL：
 
+- Grok / xAI：`https://api.x.ai/v1`
 - DeepSeek：`https://api.deepseek.com/v1`
 - 通义千问 DashScope：`https://dashscope.aliyuncs.com/compatible-mode/v1`
 - 豆包火山方舟：`https://ark.cn-beijing.volces.com/api/v3`
 
-页面里可以在 `接入工具` 的 ChatGPT / OpenAI 卡片点击 `添加 API Key` 或 `切换 Key` 来测试。Key 只会发送给你本机的 `localhost:8787`，当前版本不会保存明文 Key。
+页面里可以在 `API 供应商` 面板测试连接。Key 只会发送给你本机的 `localhost:8787`，当前版本不会保存明文 Key。
 
 ## 当前模块
 
@@ -141,7 +142,7 @@ POST /api/providers/test
 - Codex
 - Claude Code
 - ChatGPT / OpenAI
-- 本地模型（可选）
+- Grok / xAI
 
 未接入的数据源不会计入统计。
 
@@ -151,16 +152,17 @@ POST /api/providers/test
 
 - Codex：检测本机、更换目录、重新扫描
 - Claude Code：选择日志目录、更换日志目录、重新扫描
-- ChatGPT / OpenAI：添加 API Key、切换 Key、重新同步
-- 本地模型（可选）：选择本地服务、切换服务、测试连接
+- ChatGPT / OpenAI：跳转到 API 供应商面板测试连接
+- Grok / xAI：跳转到 API 供应商面板测试连接
 
-Codex、Claude Code 和本地模型目前仍是原型交互；ChatGPT / OpenAI-compatible 已经可以通过本地服务测试 API Key。
+Codex 和 Claude Code 目前仍是原型交互；ChatGPT / OpenAI-compatible 与 Grok / xAI 已经可以通过本地服务测试 API Key。
 
 ### API 供应商
 
-内置四个常用入口：
+内置五个常用入口：
 
 - OpenAI
+- Grok / xAI
 - DeepSeek
 - 通义千问
 - 豆包
